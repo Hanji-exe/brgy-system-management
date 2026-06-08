@@ -99,16 +99,39 @@ oop-brgy-system/
 ├── README.md
 ├── .gitignore
 └── BarangaySystem/
-    ├── barangay_schema.sql
-    ├── project-overview.md
-    ├── lib/
-    │   ├── sqlite-jdbc-3.45.1.0.jar
-    │   ├── slf4j-api-2.0.9.jar
-    │   └── slf4j-simple-2.0.9.jar
-    ├── src/
-    │   └── (Java source files)
-    └── out/
-        └── (Compiled .class files)
+    ├── compile.bat                  # Compilation script for Windows
+    ├── run.bat                      # Launch script for Windows
+    ├── barangay_schema.sql          # SQL schema DDL reference
+    ├── project-overview.md          # Technical overview documentation
+    ├── documentation_paper.md       # Final academic project report
+    ├── lib/                         # External JAR dependencies
+    │   ├── sqlite-jdbc-3.45.1.0.jar # SQLite JDBC Driver
+    │   ├── slf4j-api-2.0.9.jar      # Logging API interface
+    │   └── slf4j-simple-2.0.9.jar   # Logging implementation
+    ├── src/                         # Source code packages
+    │   ├── Main.java                # Application main entry point
+    │   ├── db/                      # Database connectivity package
+    │   │   └── DatabaseHandler.java # Schema creation & connection controller
+    │   ├── model/                   # Object-oriented domain entities
+    │   │   ├── Person.java          # Abstract parent model class
+    │   │   ├── Resident.java        # Resident class (subclass of Person)
+    │   │   ├── Official.java        # Official class (subclass of Resident)
+    │   │   ├── CertificateRequest.java  # Abstract certificate base
+    │   │   ├── BarangayClearance.java   # Clearance request subclass
+    │   │   ├── IndigencyCertificate.java# Indigency request subclass
+    │   │   └── CertificateOfResidency.java # Residency request subclass
+    │   └── gui/                     # Swing graphical interface package
+    │       ├── MainFrame.java       # Root JFrame navigation container
+    │       ├── LoginPanel.java      # Login form & authentication panel
+    │       ├── DashboardPanel.java  # Stats cards & main navigation sidebar
+    │       ├── ResidentFormPanel.java # Add resident demographic fields
+    │       ├── CertificateFormPanel.java # Add/Request certificate panel
+    │       ├── ViewPanel.java       # Tabbed JTables data viewer
+    │       ├── SearchPanel.java     # Search filters & resident finder
+    │       ├── UpdatePanel.java     # Profile updater & certificate releaser
+    │       ├── DeletePanel.java     # Profile and certificates cascade deleter
+    │       └── ReportPanel.java     # Aggregated analytics report panel
+    └── out/                         # Compiled class bytecode target
 ```
 
 ---
@@ -122,13 +145,13 @@ oop-brgy-system/
 
 ## 🚀 Compilation & Execution
 
-Open your terminal, navigate to the `BarangaySystem` directory, and run the following commands:
+For Windows, you can compile and launch the project simply by double-clicking the **`compile.bat`** and **`run.bat`** files respectively. Alternatively, you can run the following terminal commands:
 
 ### 1. Compile the Project
+Open your terminal, navigate to the `BarangaySystem` directory, and run:
 ```powershell
-javac -encoding UTF-8 -cp "lib/sqlite-jdbc-3.45.1.0.jar;lib/slf4j-api-2.0.9.jar;lib/slf4j-simple-2.0.9.jar" -d out src/*.java
+javac -encoding UTF-8 -cp "lib/sqlite-jdbc-3.45.1.0.jar;lib/slf4j-api-2.0.9.jar;lib/slf4j-simple-2.0.9.jar" -d out src/Main.java src/model/*.java src/db/*.java src/gui/*.java
 ```
-> **Note**: The `-encoding UTF-8` parameter is required to properly render the box-drawing characters used in the command-line menus.
 
 ### 2. Run the Application
 ```powershell
