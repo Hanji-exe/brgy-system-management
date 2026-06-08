@@ -1,3 +1,8 @@
+package gui;
+
+import model.*;
+import db.DatabaseHandler;
+
 import javax.swing.*;
 import javax.swing.border.*;
 import java.awt.*;
@@ -5,33 +10,27 @@ import java.awt.event.*;
 import java.sql.*;
 
 /**
- * ResidentFormPanel.java
+ * CertificateFormPanel.java
  *
- * Graphical panel for adding a new resident to the database.
- * Uses a sidebar navigation matching the official system layout.
+ * Graphical panel for requesting certificate issuance in the system.
+ * Connects directly to the SQLite database and validates resident existence.
  *
  * OOP Concepts Demonstrated:
- *   - Encapsulation      : UI construction and database insertions are kept private
- *   - Exception Handling : SQLException and NumberFormatException caught cleanly
+ *   - Encapsulation      : UI construction and query validations are private
+ *   - Exception Handling : SQLException and NumberFormatException caught gracefully
  *   - Constructor        : parameterized constructor linking to MainFrame
  */
-public class ResidentFormPanel extends JPanel {
+public class CertificateFormPanel extends JPanel {
 
     private MainFrame frame;
-    private JTextField firstNameField;
-    private JTextField lastNameField;
-    private JTextField ageField;
-    private JComboBox<String> genderBox;
-    private JComboBox<String> civilStatusBox;
-    private JTextField addressField;
-    private JTextField purokField;
-    private JTextField contactField;
-    private JCheckBox voterCheck;
-    private JCheckBox indigentCheck;
-    private JCheckBox pwdCheck;
+    private JTextField residentIdField;
+    private JComboBox<String> certTypeBox;
+    private JTextField purposeField;
+    private JLabel detailFieldLabel;
+    private JTextField typeDetailField;
     private JLabel statusLabel;
 
-    public ResidentFormPanel(MainFrame frame) {
+    public CertificateFormPanel(MainFrame frame) {
         this.frame = frame;
         setLayout(new BorderLayout());
         setBackground(MainFrame.COLOR_BACKGROUND);
@@ -103,8 +102,8 @@ public class ResidentFormPanel extends JPanel {
         sidebar.add(makeSectionLabel("MENU"));
 
         sidebar.add(makeSidebarButton("Dashboard", MainFrame.PANEL_DASHBOARD, false));
-        sidebar.add(makeSidebarButton("Add Resident", null, true));
-        sidebar.add(makeSidebarButton("Add Certificate", MainFrame.PANEL_ADD_CERT, false));
+        sidebar.add(makeSidebarButton("Add Resident", MainFrame.PANEL_ADD_RES, false));
+        sidebar.add(makeSidebarButton("Add Certificate", null, true));
         sidebar.add(makeSidebarButton("View Records", MainFrame.PANEL_VIEW, false));
         sidebar.add(makeSidebarButton("Search", MainFrame.PANEL_SEARCH, false));
         sidebar.add(makeSidebarButton("Update", MainFrame.PANEL_UPDATE, false));
@@ -133,12 +132,12 @@ public class ResidentFormPanel extends JPanel {
         content.setBorder(BorderFactory.createEmptyBorder(28, 28, 28, 28));
 
         // Header Section
-        JLabel pageTitle = new JLabel("Add Resident Record");
+        JLabel pageTitle = new JLabel("Request Certificate");
         pageTitle.setFont(new Font("Arial", Font.BOLD, 22));
         pageTitle.setForeground(MainFrame.COLOR_TEXT_PRIMARY);
         pageTitle.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        JLabel pageSubtitle = new JLabel("Enter personal demographic and profiling details for a new barangay resident.");
+        JLabel pageSubtitle = new JLabel("Issue official certificates (Clearance, Indigency, Residency) for registered residents.");
         pageSubtitle.setFont(new Font("Arial", Font.PLAIN, 13));
         pageSubtitle.setForeground(MainFrame.COLOR_TEXT_SECONDARY);
         pageSubtitle.setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -162,77 +161,63 @@ public class ResidentFormPanel extends JPanel {
         gbc.insets = new Insets(8, 8, 8, 8);
         gbc.weightx = 0.5;
 
-        // Form fields
-        firstNameField = new JTextField();
-        lastNameField = new JTextField();
-        ageField = new JTextField();
+        // Form Fields
+        residentIdField = new JTextField();
+        purposeField = new JTextField();
         
-        genderBox = new JComboBox<>(new String[]{"Male", "Female", "Other"});
-        civilStatusBox = new JComboBox<>(new String[]{"Single", "Married", "Widowed", "Separated"});
+        certTypeBox = new JComboBox<>(new String[]{
+            "Barangay Clearance",
+            "Indigency Certificate",
+            "Certificate of Residency"
+        });
         
-        addressField = new JTextField();
-        purokField = new JTextField();
-        contactField = new JTextField();
+        typeDetailField = new JTextField();
+        detailFieldLabel = new JLabel("Clearance Type (e.g., Employment, Travel, Legal)*");
 
-        voterCheck = new JCheckBox("Registered Voter");
-        voterCheck.setBackground(MainFrame.COLOR_CARD);
-        voterCheck.setForeground(MainFrame.COLOR_TEXT_PRIMARY);
-        voterCheck.setFont(new Font("Arial", Font.PLAIN, 13));
+        // Action Listener for dynamic label switching
+        certTypeBox.addActionListener(e -> {
+            String selected = (String) certTypeBox.getSelectedItem();
+            if ("Barangay Clearance".equals(selected)) {
+                detailFieldLabel.setText("Clearance Type (e.g., Employment, Travel, Legal)*");
+            } else if ("Indigency Certificate".equals(selected)) {
+                detailFieldLabel.setText("Assistance Type (e.g., Medical, Burial, Educational)*");
+            } else if ("Certificate of Residency".equals(selected)) {
+                detailFieldLabel.setText("Residency Purpose (e.g., School Enrollment, Bank)*");
+            }
+        });
 
-        indigentCheck = new JCheckBox("Indigent Family");
-        indigentCheck.setBackground(MainFrame.COLOR_CARD);
-        indigentCheck.setForeground(MainFrame.COLOR_TEXT_PRIMARY);
-        indigentCheck.setFont(new Font("Arial", Font.PLAIN, 13));
-
-        pwdCheck = new JCheckBox("Person with Disability (PWD)");
-        pwdCheck.setBackground(MainFrame.COLOR_CARD);
-        pwdCheck.setForeground(MainFrame.COLOR_TEXT_PRIMARY);
-        pwdCheck.setFont(new Font("Arial", Font.PLAIN, 13));
-
-        // Row 1: First Name & Last Name
-        addFormField(formCard, "First Name*", firstNameField, gbc, 0, 0);
-        addFormField(formCard, "Last Name*", lastNameField, gbc, 1, 0);
-
-        // Row 2: Age, Gender, Civil Status
-        addFormField(formCard, "Age*", ageField, gbc, 0, 1);
+        // Add to layout
+        addFormField(formCard, "Resident ID*", residentIdField, gbc, 0, 0);
         
-        JPanel genderPanel = new JPanel(new BorderLayout());
-        genderPanel.add(genderBox, BorderLayout.CENTER);
-        addFormField(formCard, "Gender*", genderPanel, gbc, 1, 1);
+        JPanel comboPanel = new JPanel(new BorderLayout());
+        comboPanel.add(certTypeBox, BorderLayout.CENTER);
+        addFormField(formCard, "Certificate Type*", comboPanel, gbc, 1, 0);
 
-        // Row 3: Civil Status & Contact
-        JPanel civilPanel = new JPanel(new BorderLayout());
-        civilPanel.add(civilStatusBox, BorderLayout.CENTER);
-        addFormField(formCard, "Civil Status*", civilPanel, gbc, 0, 2);
-        addFormField(formCard, "Contact Number (Optional)", contactField, gbc, 1, 2);
-
-        // Row 4: Address & Purok
-        addFormField(formCard, "Address*", addressField, gbc, 0, 3);
-        addFormField(formCard, "Purok / Zone*", purokField, gbc, 1, 3);
-
-        // Row 5: Demographic Tags
-        JPanel tagsPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 16, 0));
-        tagsPanel.setOpaque(false);
-        tagsPanel.add(voterCheck);
-        tagsPanel.add(indigentCheck);
-        tagsPanel.add(pwdCheck);
+        addFormField(formCard, "Purpose*", purposeField, gbc, 0, 1);
         
-        gbc.gridx = 0;
-        gbc.gridy = 8;
-        gbc.gridwidth = 2;
-        formCard.add(makeFieldLabel("Demographic Profiling Options"), gbc);
-        
-        gbc.gridy = 9;
-        formCard.add(tagsPanel, gbc);
+        // Dynamically labeled field
+        gbc.gridx = 1;
+        gbc.gridy = 2;
+        formCard.add(detailFieldLabel, gbc);
+        gbc.gridy = 3;
+        typeDetailField.setPreferredSize(new Dimension(0, 38));
+        typeDetailField.setFont(new Font("Arial", Font.PLAIN, 13));
+        typeDetailField.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(MainFrame.COLOR_BORDER, 1),
+            BorderFactory.createEmptyBorder(6, 10, 6, 10)
+        ));
+        formCard.add(typeDetailField, gbc);
 
-        // Row 6: Status Message
+        // Status Label Row
         statusLabel = new JLabel(" ");
         statusLabel.setFont(new Font("Arial", Font.BOLD, 13));
         statusLabel.setForeground(MainFrame.COLOR_SUCCESS);
-        gbc.gridy = 10;
+        gbc.gridx = 0;
+        gbc.gridy = 4;
+        gbc.gridwidth = 2;
         formCard.add(statusLabel, gbc);
 
-        // Row 7: Buttons
+        // Button Row
         JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 16, 0));
         btnPanel.setOpaque(false);
 
@@ -244,7 +229,7 @@ public class ResidentFormPanel extends JPanel {
         clearBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
         clearBtn.addActionListener(e -> clearForm());
 
-        JButton saveBtn = new JButton("Save Record");
+        JButton saveBtn = new JButton("Submit Request");
         saveBtn.setFont(new Font("Arial", Font.BOLD, 13));
         saveBtn.setBackground(MainFrame.COLOR_PRIMARY);
         saveBtn.setForeground(MainFrame.COLOR_TEXT_LIGHT);
@@ -252,12 +237,12 @@ public class ResidentFormPanel extends JPanel {
         saveBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
         saveBtn.setOpaque(true);
         saveBtn.setBorderPainted(false);
-        saveBtn.addActionListener(e -> saveResident());
+        saveBtn.addActionListener(e -> saveCertificateRequest());
 
         btnPanel.add(clearBtn);
         btnPanel.add(saveBtn);
 
-        gbc.gridy = 11;
+        gbc.gridy = 5;
         formCard.add(btnPanel, gbc);
 
         content.add(formCard);
@@ -282,8 +267,6 @@ public class ResidentFormPanel extends JPanel {
                 BorderFactory.createLineBorder(MainFrame.COLOR_BORDER, 1),
                 BorderFactory.createEmptyBorder(6, 10, 6, 10)
             ));
-        } else if (comp instanceof JComboBox) {
-            comp.setPreferredSize(new Dimension(0, 38));
         } else if (comp instanceof JPanel) {
             comp.setPreferredSize(new Dimension(0, 38));
         }
@@ -298,71 +281,63 @@ public class ResidentFormPanel extends JPanel {
         return label;
     }
 
-    private void saveResident() {
-        String fName = firstNameField.getText().trim();
-        String lName = lastNameField.getText().trim();
-        String ageStr = ageField.getText().trim();
-        String gender = (String) genderBox.getSelectedItem();
-        String civilStatus = (String) civilStatusBox.getSelectedItem();
-        String address = addressField.getText().trim();
-        String purok = purokField.getText().trim();
-        String contact = contactField.getText().trim();
+    private void saveCertificateRequest() {
+        String resIdStr = residentIdField.getText().trim();
+        String certType = (String) certTypeBox.getSelectedItem();
+        String purpose = purposeField.getText().trim();
+        String detail = typeDetailField.getText().trim();
 
-        // Required validation
-        if (fName.isEmpty() || lName.isEmpty() || ageStr.isEmpty() || address.isEmpty() || purok.isEmpty()) {
+        // Validation
+        if (resIdStr.isEmpty() || purpose.isEmpty() || detail.isEmpty()) {
             statusLabel.setForeground(MainFrame.COLOR_DANGER);
-            statusLabel.setText("Please fill in all required (*) fields.");
+            statusLabel.setText("Please fill in all fields.");
             return;
         }
 
-        // Age numeric validation
-        int age;
+        int residentId;
         try {
-            age = Integer.parseInt(ageStr);
-            if (age < 0 || age > 150) {
-                statusLabel.setForeground(MainFrame.COLOR_DANGER);
-                statusLabel.setText("Please enter a valid age (0 - 150).");
-                return;
-            }
+            residentId = Integer.parseInt(resIdStr);
         } catch (NumberFormatException e) {
             statusLabel.setForeground(MainFrame.COLOR_DANGER);
-            statusLabel.setText("Age must be a valid number.");
+            statusLabel.setText("Resident ID must be a valid number.");
             return;
         }
 
-        boolean isVoter = voterCheck.isSelected();
-        boolean isIndigent = indigentCheck.isSelected();
-        boolean isPwd = pwdCheck.isSelected();
-        boolean isSenior = age >= 60; // Auto-detected as per business rules
+        // Database logic
+        try (Connection conn = DatabaseHandler.getConnection()) {
+            // First verify resident exists
+            if (!residentExists(conn, residentId)) {
+                statusLabel.setForeground(MainFrame.COLOR_DANGER);
+                statusLabel.setText("Resident ID " + residentId + " does not exist.");
+                return;
+            }
 
-        // SQL Insertion
-        String sql = "INSERT INTO residents (first_name, last_name, age, gender, civil_status, address, purok, contact, is_voter, is_indigent, is_senior, is_pwd) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-
-        try (Connection conn = DatabaseHandler.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
-
-            pstmt.setString(1, fName);
-            pstmt.setString(2, lName);
-            pstmt.setInt(3, age);
-            pstmt.setString(4, gender);
-            pstmt.setString(5, civilStatus);
-            pstmt.setString(6, address);
-            pstmt.setString(7, purok);
-            pstmt.setString(8, contact.isEmpty() ? null : contact);
-            pstmt.setInt(9, isVoter ? 1 : 0);
-            pstmt.setInt(10, isIndigent ? 1 : 0);
-            pstmt.setInt(11, isSenior ? 1 : 0);
-            pstmt.setInt(12, isPwd ? 1 : 0);
-
-            pstmt.executeUpdate();
+            // Insert into certificates
+            String sql = "INSERT INTO certificates (resident_id, cert_type, purpose, status) VALUES (?, ?, ?, 'Pending')";
+            try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+                pstmt.setInt(1, residentId);
+                pstmt.setString(2, certType);
+                pstmt.setString(3, purpose + " (" + detail + ")");
+                pstmt.executeUpdate();
+            }
 
             statusLabel.setForeground(MainFrame.COLOR_SUCCESS);
-            statusLabel.setText("Resident added successfully!");
+            statusLabel.setText("Certificate request submitted successfully!");
             clearFormFields();
 
         } catch (SQLException e) {
             statusLabel.setForeground(MainFrame.COLOR_DANGER);
             statusLabel.setText("Database error: " + e.getMessage());
+        }
+    }
+
+    private boolean residentExists(Connection conn, int residentId) throws SQLException {
+        String sql = "SELECT resident_id FROM residents WHERE resident_id = ?";
+        try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setInt(1, residentId);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                return rs.next();
+            }
         }
     }
 
@@ -372,17 +347,10 @@ public class ResidentFormPanel extends JPanel {
     }
 
     private void clearFormFields() {
-        firstNameField.setText("");
-        lastNameField.setText("");
-        ageField.setText("");
-        genderBox.setSelectedIndex(0);
-        civilStatusBox.setSelectedIndex(0);
-        addressField.setText("");
-        purokField.setText("");
-        contactField.setText("");
-        voterCheck.setSelected(false);
-        indigentCheck.setSelected(false);
-        pwdCheck.setSelected(false);
+        residentIdField.setText("");
+        purposeField.setText("");
+        typeDetailField.setText("");
+        certTypeBox.setSelectedIndex(0);
     }
 
     // ── HELPER GENERATOR METHODS ───────────────────────────────────────────

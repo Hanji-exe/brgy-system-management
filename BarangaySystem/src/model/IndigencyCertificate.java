@@ -1,49 +1,51 @@
+package model;
+
 /**
- * BarangayClearance.java
+ * IndigencyCertificate.java
  *
  * OOP Concepts Demonstrated:
  *   - Inheritance  : extends CertificateRequest
  *   - Polymorphism : @Override getCertificateType(), generateDetails()
  *   - Constructor  : default + parameterized
  */
-public class BarangayClearance extends CertificateRequest {
+public class IndigencyCertificate extends CertificateRequest {
 
     // ── FIELDS ───────────────────────────────────────────────────────────────
     /**
-     * Clearance type — describes what the clearance is for.
-     * Examples: "Employment", "Travel", "Legal"
+     * Type of assistance this certificate supports.
+     * Examples: "Medical", "Burial", "Educational"
      */
-    private String clearanceType;
+    private String assistanceType;
 
     // ── CONSTRUCTORS ─────────────────────────────────────────────────────────
 
-    public BarangayClearance() {
+    public IndigencyCertificate() {
         super();
-        this.clearanceType = "";
+        this.assistanceType = "";
     }
 
-    public BarangayClearance(int requestId, int residentId, String purpose,
-                              String status, String dateRequested,
-                              String dateReleased, String clearanceType) {
+    public IndigencyCertificate(int requestId, int residentId, String purpose,
+                                 String status, String dateRequested,
+                                 String dateReleased, String assistanceType) {
         super(requestId, residentId, purpose, status,
               dateRequested, dateReleased);
-        this.clearanceType = clearanceType;
+        this.assistanceType = assistanceType;
     }
 
     // ── OVERRIDDEN METHODS ───────────────────────────────────────────────────
 
     @Override
     public String getCertificateType() {
-        return "Barangay Clearance";
+        return "Indigency Certificate";
     }
 
     @Override
     public String generateDetails() {
-        return "Clearance Type: " + clearanceType;
+        return "Assistance Type: " + assistanceType;
     }
 
     // ── GETTERS AND SETTERS ──────────────────────────────────────────────────
 
-    public String getClearanceType()              { return clearanceType;  }
-    public void   setClearanceType(String type)   { this.clearanceType = type; }
+    public String getAssistanceType()             { return assistanceType;      }
+    public void   setAssistanceType(String type)  { this.assistanceType = type; }
 }

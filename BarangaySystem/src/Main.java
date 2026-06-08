@@ -1,3 +1,6 @@
+import gui.MainFrame;
+import db.DatabaseHandler;
+
 import javax.swing.SwingUtilities;
 
 /**

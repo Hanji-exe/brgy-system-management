@@ -1,3 +1,8 @@
+package gui;
+
+import model.*;
+import db.DatabaseHandler;
+
 import javax.swing.*;
 import java.awt.*;
 

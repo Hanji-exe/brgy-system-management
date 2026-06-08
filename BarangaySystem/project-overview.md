@@ -212,8 +212,45 @@ CREATE TABLE IF NOT EXISTS certificates (
 
 ## 7. Entity Relationship Diagram
 
-### ERD — Text Representation
+### 7.1 Visual Mermaid ERD
+```mermaid
+erDiagram
+    USERS {
+        int user_id PK "AUTOINCREMENT"
+        string username UNIQUE "NOT NULL"
+        string password "NOT NULL"
+        string role "DEFAULT 'staff'"
+    }
+    RESIDENTS {
+        int resident_id PK "AUTOINCREMENT"
+        string first_name "NOT NULL"
+        string last_name "NOT NULL"
+        int age "NOT NULL"
+        string gender "NOT NULL"
+        string civil_status "NOT NULL"
+        string address "NOT NULL"
+        string purok "NOT NULL"
+        string contact "NULLABLE"
+        int is_voter "0 or 1"
+        int is_indigent "0 or 1"
+        int is_senior "0 or 1"
+        int is_pwd "0 or 1"
+        string date_added "DEFAULT CURRENT_DATE"
+    }
+    CERTIFICATES {
+        int cert_id PK "AUTOINCREMENT"
+        int resident_id FK "REFERENCES RESIDENTS(resident_id)"
+        string cert_type "NOT NULL"
+        string purpose "NOT NULL"
+        string status "DEFAULT 'Pending'"
+        string date_requested "DEFAULT CURRENT_DATE"
+        string date_released "NULLABLE"
+    }
 
+    RESIDENTS ||--o{ CERTIFICATES : "has/requests"
+```
+
+### 7.2 ERD — Text Representation
 ```
 ┌─────────────────────────────┐
 │           USERS             │
@@ -251,8 +288,42 @@ CREATE TABLE IF NOT EXISTS certificates (
 
 ## 8. System Flowchart
 
-### 8.1 Main Flow
+### 8.1 Main Flow — Visual Mermaid Diagram
+```mermaid
+flowchart TD
+    Start([START]) --> InitDB[Initialize Database]
+    InitDB --> LoginView[Display Login Panel]
+    LoginView --> CollectCreds[Collect Credentials]
+    CollectCreds --> ValidateDB{Validate Credentials}
+    
+    ValidateDB -- Invalid --> DecAttempts[Decrement Attempts]
+    DecAttempts --> CheckAttempts{Attempts > 0?}
+    CheckAttempts -- Yes --> LoginView
+    CheckAttempts -- No --> SysExit[System Exit]
+    
+    ValidateDB -- Valid --> DashView[Open Dashboard Menu]
+    
+    DashView --> MenuOption{Select Menu Option}
+    
+    MenuOption -- Add --> AddOpt[Add Resident / Certificate]
+    MenuOption -- View --> ViewOpt[View Records]
+    MenuOption -- Search/Edit --> SearchOpt[Search / Update / Delete]
+    MenuOption -- Reports --> ReportOpt[Reports Panel]
+    MenuOption -- Logout --> LogoutOpt[Logout Action]
+    
+    AddOpt --> SaveDB[Validate & Save to DB] --> DashView
+    ViewOpt --> FetchDB[Load data in JTables] --> DashView
+    SearchOpt --> QueryDB[Search, Update, or Delete] --> DashView
+    ReportOpt --> GroupDB[Run GROUP BY Queries] --> DashView
+    
+    LogoutOpt --> ClearSession[Clear Session] --> LoginView
+    
+    DashView -- Close Window --> CloseWin[Close Window]
+    CloseWin --> EndNode([END])
+    SysExit --> EndNode
+```
 
+### 8.2 Main Flow — Text Flowchart
 ```
 START
   │
@@ -293,8 +364,30 @@ Validate credentials against users table (PreparedStatement)
               (return after each module)
 ```
 
-### 8.2 Add Resident Sub-flow
+### 8.3 Add Resident Sub-flow — Visual Mermaid Diagram
+```mermaid
+flowchart TD
+    AddStart([Display Add View]) --> InputFields[Input Form Details]
+    InputFields --> ValidateEmpty{Fields Complete?}
+    
+    ValidateEmpty -- No --> AlertError[Show Fill Required Warning] --> InputFields
+    ValidateEmpty -- Yes --> ValidateAge{Age is Valid Integer 0-150?}
+    
+    ValidateAge -- No --> AlertAgeError[Show Invalid Age Warning] --> InputFields
+    ValidateAge -- Yes --> CheckSenior{Age >= 60?}
+    
+    CheckSenior -- Yes --> AutoSenior[Auto-tag Senior Citizen]
+    CheckSenior -- No --> SaveData[Construct Resident Object]
+    AutoSenior --> SaveData
+    
+    SaveData --> ExecInsert[Execute INSERT PreparedStatement]
+    ExecInsert --> DBStatus{Success?}
+    
+    DBStatus -- Yes --> ShowSuccess[Show Success Prompt & Reset Form] --> AddEnd([Return])
+    DBStatus -- No --> ShowError[Show SQL Error Message] --> InputFields
+```
 
+### 8.4 Add Resident Sub-flow — Text Flowchart
 ```
 Display Add sub-menu
   │
@@ -320,8 +413,20 @@ Execute INSERT PreparedStatement
 Display success or error → return to Add sub-menu
 ```
 
-### 8.3 Report Generation Sub-flow
+### 8.5 Report Generation Sub-flow — Visual Mermaid Diagram
+```mermaid
+flowchart TD
+    ReportStart([Display Reports Panel]) --> SelectType[Select Report Type]
+    SelectType --> ExecSQL[Execute Aggregated SQL Query]
+    ExecSQL --> MapCollection[Store Results in ArrayList]
+    MapCollection --> PopTable[Populate Report JTable]
+    
+    PopTable --> CheckInsight{Is Demographics Report?}
+    CheckInsight -- Yes --> CalcStats[Calculate Percentages & Display Key Insights] --> ReportEnd([Return])
+    CheckInsight -- No --> ReportEnd
+```
 
+### 8.6 Report Generation Sub-flow — Text Flowchart
 ```
 Display Report sub-menu
   │
