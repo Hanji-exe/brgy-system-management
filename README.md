@@ -57,7 +57,7 @@ The database consists of three tables defined in `barangay.db`:
 erDiagram
     USERS {
         INTEGER user_id PK
-        TEXT username UNIQUE
+        TEXT username "UNIQUE"
         TEXT password
         TEXT role
     }

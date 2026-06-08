@@ -217,7 +217,7 @@ CREATE TABLE IF NOT EXISTS certificates (
 erDiagram
     USERS {
         int user_id PK "AUTOINCREMENT"
-        string username UNIQUE "NOT NULL"
+        string username "UNIQUE, NOT NULL"
         string password "NOT NULL"
         string role "DEFAULT 'staff'"
     }

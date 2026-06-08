@@ -114,7 +114,7 @@ To visualize the database structure, entity relations, primary keys, and foreign
 erDiagram
     USERS {
         int user_id PK "AUTOINCREMENT"
-        string username UNIQUE "NOT NULL"
+        string username "UNIQUE, NOT NULL"
         string password "NOT NULL"
         string role "DEFAULT 'staff'"
     }
