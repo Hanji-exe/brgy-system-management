@@ -294,11 +294,8 @@ public class ViewPanel extends JPanel {
                 residentsList.add(resident);
             }
 
-            // Print each resident using toString() (OOP verification) and load to table
-            System.out.println("\n--- Registered Residents List (Collections Display) ---");
+            // Load residents from list to table model
             for (Resident r : residentsList) {
-                System.out.println(r.toString());
-                
                 residentsTableModel.addRow(new Object[]{
                     r.getId(),
                     r.getFirstName(),
