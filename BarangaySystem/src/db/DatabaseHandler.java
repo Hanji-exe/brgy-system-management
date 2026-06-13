@@ -1,9 +1,20 @@
 package db;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.sql.Driver;
 import java.sql.SQLException;
+import java.sql.DriverPropertyInfo;
 import java.sql.Statement;
+import java.util.Properties;
+import java.util.Arrays;
+import java.util.ArrayList;
+import java.util.List;
+import java.net.URL;
+import java.net.URLClassLoader;
 
 /**
  * DatabaseHandler
@@ -20,12 +31,26 @@ public class DatabaseHandler {
 
     // ── FIELDS ──────────────────────────────────────────────────────────────
     /**
-     * Relative path to the SQLite database file.
-     * "jdbc:sqlite:barangay.db" means the .db file sits in the
-     * same folder as the running .jar or IDE working directory.
-     * No absolute path = works on any machine with zero config.
+    * Relative path to the SQLite database file.
+    * "jdbc:sqlite:barangay.db" means the .db file sits in the
+    * same folder as the running .jar or IDE working directory.
+    * No absolute path = works on any machine with zero config.
      */
     private static final String DB_URL = "jdbc:sqlite:barangay.db";
+
+    /**
+    * Bundled SQLite JDBC driver jar name.
+    * The app can be launched from src/ or the project root, so the
+    * loader checks both lib/ and ../lib/ for the jar.
+    */
+    private static final String SQLITE_DRIVER_JAR = "sqlite-jdbc-3.45.1.0.jar";
+    private static final String SLF4J_API_JAR = "slf4j-api-2.0.9.jar";
+    private static final String SLF4J_SIMPLE_JAR = "slf4j-simple-2.0.9.jar";
+
+    /**
+     * Keeps the reflectively loaded driver alive after registration.
+     */
+    private static Driver loadedDriver;
 
     // ── CONSTRUCTORS ─────────────────────────────────────────────────────────
     /**
@@ -51,7 +76,60 @@ public class DatabaseHandler {
      * This is where exception handling is demonstrated system-wide.
      */
     public static Connection getConnection() throws SQLException {
+        ensureSQLiteDriverLoaded();
+        if (loadedDriver != null) {
+            Connection connection = loadedDriver.connect(DB_URL, new Properties());
+            if (connection != null) {
+                return connection;
+            }
+        }
         return DriverManager.getConnection(DB_URL);
+    }
+
+    /**
+     * Loads and registers the bundled SQLite JDBC driver when the app
+     * is launched without an explicit classpath.
+     */
+    private static void ensureSQLiteDriverLoaded() throws SQLException {
+        try {
+            DriverManager.getDriver(DB_URL);
+            return;
+        } catch (SQLException ignored) {
+            // Driver not registered yet; attempt to load it from disk.
+        }
+
+        Path[] candidateJars = new Path[] {
+            Paths.get("lib", SQLITE_DRIVER_JAR),
+            Paths.get("lib", SLF4J_API_JAR),
+            Paths.get("lib", SLF4J_SIMPLE_JAR),
+            Paths.get("..", "lib", SQLITE_DRIVER_JAR),
+            Paths.get("..", "lib", SLF4J_API_JAR),
+            Paths.get("..", "lib", SLF4J_SIMPLE_JAR)
+        };
+
+        List<URL> jarUrls = new ArrayList<>();
+        for (Path jarPath : candidateJars) {
+            if (Files.exists(jarPath)) {
+                try {
+                    jarUrls.add(jarPath.toUri().toURL());
+                } catch (Exception e) {
+                    throw new SQLException("Unable to read bundled dependency path " + jarPath.toAbsolutePath(), e);
+                }
+            }
+        }
+
+        if (jarUrls.isEmpty()) {
+            throw new SQLException("Bundled SQLite driver not found. Checked: " + Arrays.toString(candidateJars));
+        }
+
+        try {
+            URLClassLoader loader = new URLClassLoader(jarUrls.toArray(new URL[0]), DatabaseHandler.class.getClassLoader());
+            Class<?> driverClass = Class.forName("org.sqlite.JDBC", true, loader);
+            Driver driver = (Driver) driverClass.getDeclaredConstructor().newInstance();
+            loadedDriver = driver;
+        } catch (Exception e) {
+            throw new SQLException("Unable to load bundled SQLite driver and dependencies.", e);
+        }
     }
 
     /**
